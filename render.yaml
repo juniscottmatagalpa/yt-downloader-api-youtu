@@ -1,8 +1,9 @@
 services:
   - type: web
-    name: yt-downloader-api
+    name: yt-downloader-api-youtu
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
     autoDeploy: true
+
