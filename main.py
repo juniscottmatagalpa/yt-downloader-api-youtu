@@ -14,7 +14,6 @@ def download():
     try:
         data = request.get_json()
         url = data.get("url")
-
         if not url:
             return jsonify({"error": "Falta parámetro 'url'"}), 400
 
@@ -27,20 +26,18 @@ def download():
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         }
 
-        # Llamar al servicio de SnapSave (sin proxy, conexión directa)
-        response = requests.post(api_url, data=payload, headers=headers, timeout=15)
+        response = requests.post(api_url, data=payload, headers=headers, timeout=20)
         response.raise_for_status()
-        data = response.json()
+        result = response.json()
 
-        if not data.get("data"):
+        if not result.get("data"):
             return jsonify({"error": "No se encontraron formatos válidos."}), 404
 
-        # Seleccionar mejor formato (HD si existe)
-        formats = data["data"]
+        formats = result["data"]
         hd = next((v for v in formats if "720" in v["quality"] or "1080" in v["quality"]), formats[0])
 
         return jsonify({
-            "title": data.get("title", "Video sin título"),
+            "title": result.get("title", "Video sin título"),
             "download_url": hd["url"],
             "formats": formats
         })
@@ -48,7 +45,9 @@ def download():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
+
 
 
