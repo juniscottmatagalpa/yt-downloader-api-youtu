@@ -11,55 +11,44 @@ def home():
 
 @app.route("/download", methods=["POST"])
 def download():
-    data = request.get_json()
-    url = data.get("url")
-
-    if not url:
-        return jsonify({"error": "Falta parámetro 'url'"}), 400
-
     try:
-        # Llamada a la API gratuita de SnapSave.io
+        data = request.get_json()
+        url = data.get("url")
+
+        if not url:
+            return jsonify({"error": "Falta parámetro 'url'"}), 400
+
         api_url = "https://api.snapsave.app/api/ajaxSearch"
         payload = {"q": url, "vt": "home"}
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/115.0.0.0 Safari/537.36",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        }
+
+        # Llamar al servicio de SnapSave (sin proxy, conexión directa)
         response = requests.post(api_url, data=payload, headers=headers, timeout=15)
-
-        if response.status_code != 200:
-            return jsonify({"error": "No se pudo conectar a SnapSave"}), 500
-
+        response.raise_for_status()
         data = response.json()
 
-        # Validar respuesta
-        if "data" not in data or not data["data"]:
-            return jsonify({"error": "No se encontraron enlaces"}), 404
+        if not data.get("data"):
+            return jsonify({"error": "No se encontraron formatos válidos."}), 404
 
-        # Extraer enlace HD (720p o superior si existe)
-        links = data["data"]
-        hd_link = None
-        for item in links:
-            quality = item.get("quality", "")
-            if "720" in quality or "1080" in quality:
-                hd_link = item.get("url")
-                break
-
-        # Si no hay HD, toma el primero disponible
-        if not hd_link:
-            hd_link = links[0].get("url")
+        # Seleccionar mejor formato (HD si existe)
+        formats = data["data"]
+        hd = next((v for v in formats if "720" in v["quality"] or "1080" in v["quality"]), formats[0])
 
         return jsonify({
-            "title": data.get("title", "video"),
-            "download_url": hd_link,
-            "formats": links
+            "title": data.get("title", "Video sin título"),
+            "download_url": hd["url"],
+            "formats": formats
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
-
-
-
 
 
